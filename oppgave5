@@ -1,0 +1,72 @@
+options(encoding="UTF-8")
+
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(httr)
+library(rjstat)
+library(janitor)
+library(ggthemes)
+
+url <- "https://www.ssb.no/statbank/sq/10074075"
+
+data <- '
+{"query":
+[{"code":"Makrost","selection":{"filter":"item","values": ["koh.nrpriv","koo.nroff","bif.nr83_6","makrok.nrianv","eks.nrtot","imp.nrtot","bnpb.nr23_9","bnpb.nr23_9fn","bnpb.nr23oljsj"]}},{"code":"ContentsCode","selection":{"filter":"item","values":["Priser","Faste","PriserSesJust"]}},{"code":"Tid","selection":{"filter":"top","values":["8"]}}],
+"response":{"format":"json-stat2"}}
+'
+
+d.tmp <- POST(url , body = data, encode = "json", verbose())
+
+table <- fromJSONstat(content(d.tmp, "text"))
+
+
+table <- table %>% 
+  as_tibble()
+
+table <- table %>% 
+  pivot_wider(names_from = statistikkvariabel, values_from = value) %>% 
+  clean_names()
+
+
+table2 <- table %>% 
+  arrange(ar)
+  
+
+table2 %>% 
+  ggplot(aes(x = ar, y = utenlandsfodte, color = landbakgrunn, group = landbakgrunn))+
+  geom_line()+
+  labs(x = "År", y = "Utenlandsfødte", 
+       title = "Innvandring etter landbakgrunn mellom årene 2005-2022", 
+       subtitle = "Fra hvilke regioner ser man en størst økning av innvandring til Norge?")+
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text())
+
+#oppgave 2
+
+url2 <- "https://www.ssb.no/statbank/sq/10074094"
+
+d.tmp2 <- POST(url2 , body = data, encode = "json", verbose())
+
+table3 <- fromJSONstat(content(d.tmp2, "text"))
+
+
+table3 <- table3 %>% 
+  as_tibble()
+
+table3 <- table3 %>% 
+  pivot_wider(names_from = statistikkvariabel, values_from = value) %>% 
+  clean_names()
+
+table3 <- table3 %>% 
+  select(-kjonn)
+
+table3 %>% 
+  ggplot(aes(x=naering_sn2007, y = sysselsatte))+
+  geom_bar(stat = "identity")+
+  theme_economist()+
+  theme(axis.text.x = element_text(angle = 90, size = 9))+
+  labs(x = "Sektor", y = "Antall sysselsatte", 
+       title = "Fordeling av innvandrere fra EU land i Øst-Europa, i ulke næringer")
+  
+  
